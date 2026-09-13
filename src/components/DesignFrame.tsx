@@ -493,11 +493,6 @@ export function DesignFrame({
           Designing…
         </div>
       )}
-      {selectMode && !isPartial && (
-        <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-2 rounded-full bg-[#2b6bff] px-3 py-1.5 text-xs font-medium text-white shadow-lg">
-          Click any element to select · click again to remove · hold ⌥/Alt to select its whole section
-        </div>
-      )}
     </div>
   );
 }
