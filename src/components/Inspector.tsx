@@ -406,14 +406,22 @@ export function Inspector({ targets, onClose, onRemove, onApply, onAiEdit, onFoc
 
       <div className="space-y-2 border-t border-black/5 p-3">
         {isSingle && (
-          <button
-            onClick={apply}
-            disabled={!dirty || !root || hasInvalid}
-            title={hasInvalid ? "Fix invalid Tailwind classes first" : undefined}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#0b1220] px-3 py-2 text-sm font-medium text-white hover:bg-black disabled:cursor-not-allowed disabled:bg-[#0b1220]/10 disabled:text-[#0b1220]/40"
-          >
-            <Check className="h-4 w-4" /> {hasInvalid ? "Fix invalid classes" : "Apply changes"}
-          </button>
+          <>
+            {hasInvalid && (
+              <p className="text-[11px] leading-snug text-amber-600">
+                {invalidTokens.length} class{invalidTokens.length > 1 ? "es" : ""} look
+                unfamiliar — you can still apply them.
+              </p>
+            )}
+            <button
+              onClick={apply}
+              disabled={!dirty || !root}
+              title={!dirty ? "Change classes or text first" : undefined}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#0b1220] px-3 py-2 text-sm font-medium text-white hover:bg-black disabled:cursor-not-allowed disabled:bg-[#0b1220]/10 disabled:text-[#0b1220]/40"
+            >
+              <Check className="h-4 w-4" /> Apply changes
+            </button>
+          </>
         )}
         <button
           onClick={onAiEdit}
@@ -422,6 +430,7 @@ export function Inspector({ targets, onClose, onRemove, onApply, onAiEdit, onFoc
           {isSingle ? "Edit with AI prompt" : `Prompt across ${targets.length} sections`}
         </button>
       </div>
+
     </aside>
   );
 }
