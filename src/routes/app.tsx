@@ -1198,7 +1198,7 @@ function AppHome() {
             </button>
           </div>
 
-          <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
             {messages.map((m) => (
               <div
                 key={m.id}
@@ -1265,7 +1265,7 @@ function AppHome() {
             )}
 
           </div>
-          <div className="border-t border-black/5 p-3">
+          <div className="max-h-[70%] shrink-0 overflow-y-auto border-t border-black/5 p-3">
             {editTargets.length > 0 && (
               <div className="mb-2 space-y-1.5">
                 <div className="flex items-center gap-2 px-1 text-[11px] font-medium uppercase tracking-wider text-[#0b1220]/50">
