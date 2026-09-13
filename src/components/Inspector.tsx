@@ -136,7 +136,7 @@ export function Inspector({ targets, onClose, onRemove, onApply, onAiEdit, onFoc
   };
 
   const apply = () => {
-    if (!root || hasInvalid) return;
+    if (!root) return;
     root.setAttribute("class", classes);
     if (textOnly) {
       root.textContent = text;
@@ -144,6 +144,7 @@ export function Inspector({ targets, onClose, onRemove, onApply, onAiEdit, onFoc
     onApply(root.outerHTML);
     setDirty(false);
   };
+
 
   return (
     <aside className="flex h-full w-[300px] shrink-0 flex-col border-l border-black/5 bg-white">
