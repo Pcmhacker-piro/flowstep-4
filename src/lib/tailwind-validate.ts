@@ -154,17 +154,56 @@ export const PREFIXES: readonly string[] = [
 const TOKEN_RE = /^-?[a-zA-Z][\w-]*(?:\/\d+)?$/;
 const ARBITRARY_RE = /^-?[a-zA-Z][\w-]*-\[[^\]]+\](?:\/\d+)?$/;
 
+// Variant families that always take an arbitrary/parameterised value, e.g.
+// data-[state=open]:, aria-[current=page]:, has-[input]:, group-[.x]:, min-[40rem]:
+const PARAM_VARIANT_PREFIXES = [
+  "data-", "aria-", "has-", "not-", "group-", "peer-", "supports-",
+  "min-", "max-", "nth-", "in-", "where-",
+];
+
+function isKnownVariant(variant: string): boolean {
+  if (VARIANTS.has(variant)) return true;
+  // arbitrary variant: [&:hover], [&>svg]
+  if (variant.startsWith("[") && variant.endsWith("]")) return true;
+  // parameterised variant: data-[...], aria-[...], group-[...], min-[...]
+  if (
+    variant.includes("[") &&
+    variant.endsWith("]") &&
+    PARAM_VARIANT_PREFIXES.some((p) => variant.startsWith(p))
+  ) {
+    return true;
+  }
+  // compound variants built on a known base: group-hover, peer-focus-visible,
+  // data-open, aria-selected, not-first, has-checked …
+  const dashIdx = variant.indexOf("-");
+  if (dashIdx > 0) {
+    const head = variant.slice(0, dashIdx);
+    if (PARAM_VARIANT_PREFIXES.includes(head + "-")) return true;
+    if (VARIANTS.has(head)) return true;
+  }
+  return false;
+}
+
 function stripVariants(token: string): { base: string; ok: boolean } {
   let rest = token;
-  while (rest.includes(":")) {
-    const idx = rest.indexOf(":");
+  // Walk colons, but never split inside brackets (e.g. [mask-image:linear-...]).
+  for (;;) {
+    let depth = 0;
+    let idx = -1;
+    for (let i = 0; i < rest.length; i++) {
+      const ch = rest[i];
+      if (ch === "[") depth++;
+      else if (ch === "]") depth--;
+      else if (ch === ":" && depth === 0) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx === -1) return { base: rest, ok: true };
     const variant = rest.slice(0, idx);
-    // arbitrary variant e.g. [&:hover]
-    const isArbitrary = variant.startsWith("[") && variant.endsWith("]");
-    if (!isArbitrary && !VARIANTS.has(variant)) return { base: rest, ok: false };
+    if (!isKnownVariant(variant)) return { base: rest, ok: false };
     rest = rest.slice(idx + 1);
   }
-  return { base: rest, ok: true };
 }
 
 export function isValidClass(raw: string): boolean {
@@ -174,12 +213,13 @@ export function isValidClass(raw: string): boolean {
   if (!ok) return false;
   const bareBase = base.startsWith("!") ? base.slice(1) : base;
   if (!bareBase) return false;
+  // Fully arbitrary property: [mask-image:linear-gradient(...)]
+  if (bareBase.startsWith("[") && bareBase.includes("]")) return true;
   if (ARBITRARY_RE.test(bareBase)) {
     // check prefix (part before "-[") is known static or dynamic prefix root
     const cut = bareBase.indexOf("-[");
     const prefixRoot = bareBase.slice(0, cut + 1); // includes trailing "-"
     if (PREFIXES.some((p) => p === prefixRoot || prefixRoot.startsWith(p))) return true;
-    // also allow full-token arbitrary like "[mask:linear-gradient(...)]" -> reject unknown
     return STATIC_UTILITIES.has(bareBase.slice(0, cut));
   }
   if (!TOKEN_RE.test(bareBase)) return false;
@@ -189,6 +229,7 @@ export function isValidClass(raw: string): boolean {
   if (PREFIXES.some((p) => withoutOpacity.startsWith(p) && withoutOpacity.length > p.length)) return true;
   return false;
 }
+
 
 export function tokenize(value: string): string[] {
   return value.split(/\s+/).filter(Boolean);
