@@ -1693,6 +1693,15 @@ function AppHome() {
                     setEditingTextId(null);
                     if (!item.text.trim()) setItems((it) => it.filter((i) => i.id !== item.id));
                   };
+                  // The pointer event that creates the box also fires a blur a
+                  // moment later; ignore that first blur so typing can start.
+                  const onEditorBlur = (el: HTMLInputElement) => {
+                    if (Date.now() - textEditStartRef.current < 500) {
+                      el.focus();
+                      return;
+                    }
+                    finishEditing();
+                  };
                   if (editingTextId === item.id) {
                     return (
                       <input
