@@ -536,9 +536,13 @@ function AppHome() {
       setTool("select");
 
     } else if (tool === "text") {
+      // Inline editor rather than window.prompt — modal prompts are blocked
+      // inside embedded preview frames, which made the text tool look broken.
       const { x, y } = toCanvasCoords(e.clientX, e.clientY);
-      const text = window.prompt("Enter text") ?? "";
-      if (text) mutateItems("Add text", (it) => [...it, { id: uid(), type: "text", x, y, w: 240, h: 40, text }]);
+      const id = uid();
+      mutateItems("Add text", (it) => [...it, { id, type: "text", x, y, w: 240, h: 40, text: "" }]);
+      setEditingTextId(id);
+      setSelectedId(id);
       setTool("select");
     }
   };
