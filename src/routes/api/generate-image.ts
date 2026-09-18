@@ -275,6 +275,106 @@ function gatewayMessage(status: number, body: string) {
   }
 }
 
+/** True when the produced markup looks unfinished (cut off mid-document). */
+function looksTruncated(text: string) {
+  const trimmed = text.trimEnd();
+  if (!trimmed) return true;
+  if (/<\/html>\s*$/i.test(trimmed)) return false;
+  if (/<\/body>\s*$/i.test(trimmed)) return false;
+  // A complete top-level section normally ends on a closing tag.
+  return !/>$/.test(trimmed);
+}
+
+/**
+ * Generate one screen with the user's own provider key.
+ * Provider keys stream OpenAI-style chat completions and frequently stop at the
+ * output-token ceiling, so resume from the partial output until the markup is
+ * complete instead of leaving a half-built screen on the canvas.
+ */
+async function streamByoScreen(params: {
+  byo: { provider: string; apiKey: string; model: string };
+  system: string;
+  userText: string;
+  screenId: string;
+  emit: (event: StreamEvent) => void;
+  signal: AbortSignal;
+}) {
+  const { byo, system, userText, screenId, emit, signal } = params;
+  const { streamChatWithUserKey, providerErrorMessage } = await import("@/lib/providerAdapters.server");
+
+  let produced = "";
+  let finishReason = "";
+  let providerError = "";
+
+  for (let round = 0; round < 4; round += 1) {
+    if (signal.aborted) return;
+    const upstream = await streamChatWithUserKey({
+      provider: byo.provider as never,
+      apiKey: byo.apiKey,
+      model: byo.model,
+      systemPrompt: system,
+      userPrompt: userText,
+      ...(produced ? { continueFrom: produced } : {}),
+    });
+
+    if (!upstream.ok || !upstream.body) {
+      const body = await upstream.text().catch(() => "");
+      if (produced) break; // keep what we already streamed rather than discarding the screen
+      throw new Error(providerErrorMessage(byo.provider as never, upstream.status, body));
+    }
+
+    finishReason = "";
+    let roundText = "";
+    const parser = createParser({
+      onEvent(event) {
+        if (!event.data || event.data === "[DONE]") return;
+        let payload: {
+          choices?: Array<{ delta?: { content?: string }; finish_reason?: string | null }>;
+          error?: { message?: string };
+        };
+        try {
+          payload = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        if (payload.error?.message) {
+          providerError = payload.error.message;
+          return;
+        }
+        const choice = payload.choices?.[0];
+        if (choice?.finish_reason) finishReason = choice.finish_reason;
+        const delta = choice?.delta?.content;
+        if (typeof delta === "string" && delta.length > 0) {
+          roundText += delta;
+          produced += delta;
+          emit({ type: "screen-delta", screenId, delta });
+        }
+      },
+    });
+
+    const reader = upstream.body.pipeThrough(new TextDecoderStream()).getReader();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        parser.feed(value);
+      }
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+
+    if (providerError && !produced) throw new Error(providerError);
+    if (!roundText) break;
+    // Only continue when the model actually ran out of room or the markup is unfinished.
+    const truncated = finishReason === "length" || finishReason === "max_tokens" || looksTruncated(produced);
+    if (!truncated) break;
+  }
+
+  if (!produced) throw new Error(providerError || "Your own provider key returned no design output for this screen.");
+  emit({ type: "screen-complete", screenId });
+}
+
+
 async function streamOneScreen(params: {
   key: string;
   prompt: string;
@@ -294,18 +394,14 @@ async function streamOneScreen(params: {
   const system = systemPrompt(screen.kind);
   const userText = buildScreenPrompt(prompt, screens, screen, direction, runId, images.length > 0);
 
-  let upstream: Response;
   if (byo) {
-    const { streamChatWithUserKey } = await import("@/lib/providerAdapters.server");
-    upstream = await streamChatWithUserKey({
-      provider: byo.provider as never,
-      apiKey: byo.apiKey,
-      model: byo.model,
-      systemPrompt: system,
-      userPrompt: userText,
-    });
-  } else {
-    upstream = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+    await streamByoScreen({ byo, system, userText, screenId: screen.id, emit, signal });
+    return;
+  }
+
+  const upstream: Response = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+
+
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -338,55 +434,12 @@ async function streamOneScreen(params: {
         ],
       }),
     });
-  }
 
   if (!upstream.ok || !upstream.body) {
     const body = await upstream.text().catch(() => "");
     throw new Error(gatewayMessage(upstream.status, body));
   }
 
-  if (byo) {
-    // Provider keys stream OpenAI-style chat completions: { choices: [{ delta: { content } }] }
-    let byoError = "";
-    let sawText = false;
-    const chatParser = createParser({
-      onEvent(event) {
-        if (!event.data || event.data === "[DONE]") return;
-        let payload: {
-          choices?: Array<{ delta?: { content?: string } }>;
-          error?: { message?: string };
-        };
-        try {
-          payload = JSON.parse(event.data);
-        } catch {
-          return;
-        }
-        if (payload.error?.message) {
-          byoError = payload.error.message;
-          return;
-        }
-        const delta = payload.choices?.[0]?.delta?.content;
-        if (typeof delta === "string" && delta.length > 0) {
-          sawText = true;
-          emit({ type: "screen-delta", screenId: screen.id, delta });
-        }
-      },
-    });
-    const chatReader = upstream.body.pipeThrough(new TextDecoderStream()).getReader();
-    try {
-      while (true) {
-        const { value, done } = await chatReader.read();
-        if (done) break;
-        chatParser.feed(value);
-      }
-    } finally {
-      chatReader.cancel().catch(() => {});
-    }
-    if (byoError) throw new Error(byoError);
-    if (!sawText) throw new Error("Your own provider key returned no design output for this screen.");
-    emit({ type: "screen-complete", screenId: screen.id });
-    return;
-  }
 
 
   let completed = false;
