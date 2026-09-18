@@ -1830,25 +1830,25 @@ function AppHome() {
 
           {/* Bottom floating toolbar */}
           <div className="absolute bottom-6 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-full bg-white px-2 py-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
-            <ToolBtn active={tool === "select"} onClick={() => setTool("select")}>
+            <ToolBtn label="Select" active={tool === "select"} onClick={() => setTool("select")}>
               <MousePointer2 className="h-4 w-4 text-[#2b6bff]" />
             </ToolBtn>
-            <ToolBtn active={tool === "hand"} onClick={() => setTool("hand")}>
+            <ToolBtn label="Pan" active={tool === "hand"} onClick={() => setTool("hand")}>
               <Hand className="h-4 w-4" />
             </ToolBtn>
-            <ToolBtn active={tool === "pen"} onClick={() => setTool("pen")}>
+            <ToolBtn label="Draw" active={tool === "pen"} onClick={() => setTool("pen")}>
               <Pencil className="h-4 w-4" />
             </ToolBtn>
-            <ToolBtn active={tool === "eraser"} onClick={() => setTool("eraser")}>
+            <ToolBtn label="Erase" active={tool === "eraser"} onClick={() => setTool("eraser")}>
               <Eraser className="h-4 w-4" />
             </ToolBtn>
-            <ToolBtn active={tool === "text"} onClick={() => setTool("text")}>
+            <ToolBtn label="Add text" active={tool === "text"} onClick={() => setTool("text")}>
               <TypeIcon className="h-4 w-4" />
             </ToolBtn>
-            <ToolBtn active={tool === "rect"} onClick={() => setTool("rect")}>
+            <ToolBtn label="Add rectangle" active={tool === "rect"} onClick={() => setTool("rect")}>
               <SquareIcon className="h-4 w-4" />
             </ToolBtn>
-            <ToolBtn active={tool === "shapes"} onClick={() => setTool("shapes")}>
+            <ToolBtn label="Add shape" active={tool === "shapes"} onClick={() => setTool("shapes")}>
               <Shapes className="h-4 w-4" />
             </ToolBtn>
             <div className="mx-1 h-5 w-px bg-black/10" />
