@@ -299,8 +299,8 @@ async function streamOneScreen(params: {
     return;
   }
 
-  const upstream: Response = await (async () =>
-    fetch("https://ai.gateway.lovable.dev/v1/responses", {
+  const upstream: Response = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+
 
       method: "POST",
       headers: {
