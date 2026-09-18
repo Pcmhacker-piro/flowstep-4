@@ -233,9 +233,9 @@ function Hero() {
             style={{ animationDelay: "320ms" }}
           >
             {[
-              { k: "Screens generated", v: "40k+" },
-              { k: "Avg. render", v: "12s" },
-              { k: "Fully editable", v: "100%" },
+              { k: "From a single prompt", v: "Real screens" },
+              { k: "Every layer editable", v: "Full control" },
+              { k: "Code or image", v: "Export ready" },
             ].map((s) => (
               <div key={s.k} className="flex flex-col">
                 <div className="font-display text-xl font-bold tracking-tight">{s.v}</div>
