@@ -1689,12 +1689,46 @@ function AppHome() {
                 }
 
                 if (item.type === "text") {
+                  const finishEditing = () => {
+                    setEditingTextId(null);
+                    if (!item.text.trim()) setItems((it) => it.filter((i) => i.id !== item.id));
+                  };
+                  if (editingTextId === item.id) {
+                    return (
+                      <input
+                        key={item.id}
+                        autoFocus
+                        value={item.text}
+                        placeholder="Type text…"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onChange={(e) =>
+                          setItems((it) =>
+                            it.map((i) => (i.id === item.id && i.type === "text" ? { ...i, text: e.target.value } : i)),
+                          )
+                        }
+                        onBlur={finishEditing}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === "Escape") {
+                            e.preventDefault();
+                            finishEditing();
+                          }
+                        }}
+                        style={{ left: item.x, top: item.y, width: Math.max(item.w, 240) }}
+                        className="absolute rounded-md border border-[#2b6bff] bg-white px-2 py-1 text-xl font-medium text-[#0b1220] outline-none"
+                      />
+                    );
+                  }
                   return (
                     <div
                       key={item.id}
                       onPointerDown={(e) => startDragItem(e, item)}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setEditingTextId(item.id);
+                      }}
                       style={{ left: item.x, top: item.y, minWidth: item.w }}
                       className={`${commonCls} cursor-move whitespace-pre px-2 py-1 text-xl font-medium text-[#0b1220]`}
+                      title="Double-click to edit"
                     >
                       {item.text}
                     </div>
