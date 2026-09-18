@@ -1920,14 +1920,20 @@ function ToolBtn({
   active,
   onClick,
   children,
+  label,
 }: {
   active?: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  label?: string;
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
+      title={label}
+      aria-label={label}
+      aria-pressed={!!active}
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition ${
         active ? "bg-[#e8efff]" : "hover:bg-black/5"
       }`}
