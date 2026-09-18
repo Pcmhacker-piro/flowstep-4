@@ -1735,6 +1735,7 @@ function AppHome() {
                       onPointerDown={(e) => startDragItem(e, item)}
                       onDoubleClick={(e) => {
                         e.stopPropagation();
+                        textEditStartRef.current = Date.now();
                         setEditingTextId(item.id);
                       }}
                       style={{ left: item.x, top: item.y, minWidth: item.w }}
