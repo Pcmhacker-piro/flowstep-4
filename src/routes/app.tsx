@@ -139,6 +139,9 @@ function AppHome() {
   // Uploaded reference images attached to the next prompt.
   const [refImages, setRefImages] = useState<{ id: string; name: string; src: string }[]>([]);
 
+  // Id of the canvas text item currently being typed into (inline editor).
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+
   // Undo/redo history — snapshot-based so add, move, delete, upload, and
   // html edits all undo through the same mechanism.
   type HistoryEntry = { label: string; prevItems: CanvasItem[]; nextItems: CanvasItem[] };
