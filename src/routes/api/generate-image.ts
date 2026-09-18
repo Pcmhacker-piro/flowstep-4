@@ -440,6 +440,7 @@ export const Route = createFileRoute("/api/generate-image")({
           images?: unknown;
           runId?: unknown;
           variationIndex?: unknown;
+          model?: unknown;
         };
         const prompt = (body.prompt ?? "").trim();
         const images = (Array.isArray(body.images) ? body.images : [])
