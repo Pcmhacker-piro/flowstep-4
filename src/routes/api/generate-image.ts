@@ -457,23 +457,27 @@ export const Route = createFileRoute("/api/generate-image")({
         const key = process.env['LOVABLE_API_KEY'];
         if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
 
-        // If the signed-in user saved their own provider key (API keys page),
-        // generate with it so their own quota is used instead of Lovable credits.
-        const requestedModel = typeof body.model === "string" ? body.model : "openai/gpt-6-astra";
+        // The picked model decides where generation runs: models tied to a
+        // provider use the user's own saved key, the built-in model uses credits.
+        const { resolveDesignModel, providerForDesignModel } = await import("@/lib/designModels");
+        const requestedModel = resolveDesignModel(body.model);
+        const wantedProvider = providerForDesignModel(requestedModel);
         let byo: { provider: string; apiKey: string; model: string } | null = null;
-        try {
-          const { resolveUserKeysFromRequest } = await import("@/lib/userKeyLookup.server");
-          const { pickProviderForModel } = await import("@/lib/providerAdapters.server");
-          const { keys: userKeys } = await resolveUserKeysFromRequest(request);
-          const saved = Object.keys(userKeys) as Array<keyof typeof userKeys>;
-          const providerIds = new Set(saved) as Set<never>;
-          const picked = pickProviderForModel(requestedModel, providerIds) ?? saved[0] ?? null;
-          const apiKey = picked ? userKeys[picked] : undefined;
-          if (picked && apiKey) {
-            byo = { provider: picked, apiKey, model: requestedModel };
+        if (wantedProvider) {
+          try {
+            const { resolveUserKeysFromRequest } = await import("@/lib/userKeyLookup.server");
+            const { keys: userKeys } = await resolveUserKeysFromRequest(request);
+            const apiKey = userKeys[wantedProvider];
+            if (!apiKey) {
+              return new Response(
+                `No ${wantedProvider} API key saved for your account. Add one on the API keys page, or pick the built-in model.`,
+                { status: 400 },
+              );
+            }
+            byo = { provider: wantedProvider, apiKey, model: requestedModel };
+          } catch {
+            return new Response("Could not read your saved API key. Sign in again and retry.", { status: 401 });
           }
-        } catch {
-          // Fall back to Lovable credits when key lookup fails.
         }
 
 

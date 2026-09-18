@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import logoAsset from "@/assets/logo.png";
 import { useEffect, useRef, useState, useCallback, type PointerEvent as ReactPointerEvent } from "react";
 import { DESIGN_MODELS, DEFAULT_DESIGN_MODEL, type DesignModelId } from "@/lib/designModels";
+import { useServerFn } from "@tanstack/react-start";
+import { listMyApiKeys } from "@/lib/apiKeys.functions";
 import { flushSync } from "react-dom";
 import { createParser } from "eventsource-parser";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,6 +87,10 @@ function AppHome() {
   const [level, setLevel] = useState<"v1" | "v2" | "polished" | "industry">("industry");
   const [model, setModel] = useState<DesignModelId>(DEFAULT_DESIGN_MODEL);
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
+  // Providers the signed-in user has saved a key for — models needing a missing
+  // key are shown greyed out in the picker.
+  const [savedProviders, setSavedProviders] = useState<string[]>([]);
+  const listKeysFn = useServerFn(listMyApiKeys);
   const [messages, setMessages] = useState<ChatMsg[]>([
     { id: uid(), role: "assistant", text: "Describe any UI or design and I'll generate it on your canvas." },
   ]);
@@ -476,6 +482,24 @@ function AppHome() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
   }, []);
+
+  // Load which providers the user saved a key for, so the picker can grey out
+  // models that cannot run yet.
+  useEffect(() => {
+    if (!email) {
+      setSavedProviders([]);
+      return;
+    }
+    let cancelled = false;
+    listKeysFn()
+      .then((rows) => {
+        if (!cancelled) setSavedProviders(rows.map((r) => r.provider as string));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [email, listKeysFn]);
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -1460,18 +1484,27 @@ function AppHome() {
                           </div>
                           {DESIGN_MODELS.map((m) => {
                             const active = m.id === model;
+                            const needsKey = m.provider ? !savedProviders.includes(m.provider) : false;
                             return (
                               <button
                                 key={m.id}
                                 type="button"
                                 role="option"
                                 aria-selected={active}
+                                aria-disabled={needsKey}
+                                disabled={needsKey}
+                                title={needsKey ? "Add your key on the API keys page to use this model" : m.hint}
                                 onClick={() => {
+                                  if (needsKey) return;
                                   setModel(m.id);
                                   setModelPickerOpen(false);
                                 }}
                                 className={`grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 px-4 py-3 text-left transition-colors ${
-                                  active ? "bg-[#2b6bff]/[0.08]" : "hover:bg-neutral-100"
+                                  needsKey
+                                    ? "cursor-not-allowed opacity-50"
+                                    : active
+                                      ? "bg-[#2b6bff]/[0.08]"
+                                      : "hover:bg-neutral-100"
                                 }`}
                               >
                                 <span
@@ -1484,7 +1517,7 @@ function AppHome() {
                                     {m.label}
                                   </span>
                                   <span className="mt-0.5 block text-[12.5px] leading-snug text-neutral-600 break-words">
-                                    {m.hint}
+                                    {needsKey ? "Needs your own key — add it on the API keys page" : m.hint}
                                   </span>
                                 </span>
                                 {active ? (
@@ -1497,6 +1530,13 @@ function AppHome() {
                               </button>
                             );
                           })}
+                          <Link
+                            to="/api-keys"
+                            className="block px-4 py-3 text-[12.5px] font-medium text-[#2b6bff] hover:bg-neutral-100"
+                            onClick={() => setModelPickerOpen(false)}
+                          >
+                            Manage your API keys →
+                          </Link>
                         </div>
 
                       </>
