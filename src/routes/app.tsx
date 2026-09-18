@@ -141,6 +141,7 @@ function AppHome() {
 
   // Id of the canvas text item currently being typed into (inline editor).
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const textEditStartRef = useRef(0);
 
   // Undo/redo history — snapshot-based so add, move, delete, upload, and
   // html edits all undo through the same mechanism.
