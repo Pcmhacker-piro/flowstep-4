@@ -139,6 +139,10 @@ function AppHome() {
   // Uploaded reference images attached to the next prompt.
   const [refImages, setRefImages] = useState<{ id: string; name: string; src: string }[]>([]);
 
+  // Id of the canvas text item currently being typed into (inline editor).
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const textEditStartRef = useRef(0);
+
   // Undo/redo history — snapshot-based so add, move, delete, upload, and
   // html edits all undo through the same mechanism.
   type HistoryEntry = { label: string; prevItems: CanvasItem[]; nextItems: CanvasItem[] };
@@ -533,9 +537,14 @@ function AppHome() {
       setTool("select");
 
     } else if (tool === "text") {
+      // Inline editor rather than window.prompt — modal prompts are blocked
+      // inside embedded preview frames, which made the text tool look broken.
       const { x, y } = toCanvasCoords(e.clientX, e.clientY);
-      const text = window.prompt("Enter text") ?? "";
-      if (text) mutateItems("Add text", (it) => [...it, { id: uid(), type: "text", x, y, w: 240, h: 40, text }]);
+      const id = uid();
+      mutateItems("Add text", (it) => [...it, { id, type: "text", x, y, w: 240, h: 40, text: "" }]);
+      textEditStartRef.current = Date.now();
+      setEditingTextId(id);
+      setSelectedId(id);
       setTool("select");
     }
   };
@@ -1682,12 +1691,56 @@ function AppHome() {
                 }
 
                 if (item.type === "text") {
+                  const finishEditing = () => {
+                    setEditingTextId(null);
+                    if (!item.text.trim()) setItems((it) => it.filter((i) => i.id !== item.id));
+                  };
+                  // The pointer event that creates the box also fires a blur a
+                  // moment later; ignore that first blur so typing can start.
+                  const onEditorBlur = (el: HTMLInputElement) => {
+                    if (Date.now() - textEditStartRef.current < 500) {
+                      el.focus();
+                      return;
+                    }
+                    finishEditing();
+                  };
+                  if (editingTextId === item.id) {
+                    return (
+                      <input
+                        key={item.id}
+                        autoFocus
+                        value={item.text}
+                        placeholder="Type text…"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onChange={(e) =>
+                          setItems((it) =>
+                            it.map((i) => (i.id === item.id && i.type === "text" ? { ...i, text: e.target.value } : i)),
+                          )
+                        }
+                        onBlur={(e) => onEditorBlur(e.currentTarget)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === "Escape") {
+                            e.preventDefault();
+                            finishEditing();
+                          }
+                        }}
+                        style={{ left: item.x, top: item.y, width: Math.max(item.w, 240) }}
+                        className="absolute rounded-md border border-[#2b6bff] bg-white px-2 py-1 text-xl font-medium text-[#0b1220] outline-none"
+                      />
+                    );
+                  }
                   return (
                     <div
                       key={item.id}
                       onPointerDown={(e) => startDragItem(e, item)}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        textEditStartRef.current = Date.now();
+                        setEditingTextId(item.id);
+                      }}
                       style={{ left: item.x, top: item.y, minWidth: item.w }}
                       className={`${commonCls} cursor-move whitespace-pre px-2 py-1 text-xl font-medium text-[#0b1220]`}
+                      title="Double-click to edit"
                     >
                       {item.text}
                     </div>
