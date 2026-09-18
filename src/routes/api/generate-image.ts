@@ -345,48 +345,6 @@ async function streamOneScreen(params: {
     throw new Error(gatewayMessage(upstream.status, body));
   }
 
-  if (byo) {
-    // Provider keys stream OpenAI-style chat completions: { choices: [{ delta: { content } }] }
-    let byoError = "";
-    let sawText = false;
-    const chatParser = createParser({
-      onEvent(event) {
-        if (!event.data || event.data === "[DONE]") return;
-        let payload: {
-          choices?: Array<{ delta?: { content?: string } }>;
-          error?: { message?: string };
-        };
-        try {
-          payload = JSON.parse(event.data);
-        } catch {
-          return;
-        }
-        if (payload.error?.message) {
-          byoError = payload.error.message;
-          return;
-        }
-        const delta = payload.choices?.[0]?.delta?.content;
-        if (typeof delta === "string" && delta.length > 0) {
-          sawText = true;
-          emit({ type: "screen-delta", screenId: screen.id, delta });
-        }
-      },
-    });
-    const chatReader = upstream.body.pipeThrough(new TextDecoderStream()).getReader();
-    try {
-      while (true) {
-        const { value, done } = await chatReader.read();
-        if (done) break;
-        chatParser.feed(value);
-      }
-    } finally {
-      chatReader.cancel().catch(() => {});
-    }
-    if (byoError) throw new Error(byoError);
-    if (!sawText) throw new Error("Your own provider key returned no design output for this screen.");
-    emit({ type: "screen-complete", screenId: screen.id });
-    return;
-  }
 
 
   let completed = false;
