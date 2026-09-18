@@ -61,7 +61,9 @@ function Logo() {
         alt="Flowstep logo"
         className="h-8 w-8 rounded-lg object-cover"
       />
-      <span className="text-lg font-semibold tracking-tight text-[#0b1220]">flowstep</span>
+      <span className="font-display text-lg font-bold tracking-tight text-ink-foreground">
+        flowstep<span className="text-electric">.</span>
+      </span>
     </Link>
   );
 }
