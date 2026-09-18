@@ -1484,18 +1484,27 @@ function AppHome() {
                           </div>
                           {DESIGN_MODELS.map((m) => {
                             const active = m.id === model;
+                            const needsKey = m.provider ? !savedProviders.includes(m.provider) : false;
                             return (
                               <button
                                 key={m.id}
                                 type="button"
                                 role="option"
                                 aria-selected={active}
+                                aria-disabled={needsKey}
+                                disabled={needsKey}
+                                title={needsKey ? "Add your key on the API keys page to use this model" : m.hint}
                                 onClick={() => {
+                                  if (needsKey) return;
                                   setModel(m.id);
                                   setModelPickerOpen(false);
                                 }}
                                 className={`grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 px-4 py-3 text-left transition-colors ${
-                                  active ? "bg-[#2b6bff]/[0.08]" : "hover:bg-neutral-100"
+                                  needsKey
+                                    ? "cursor-not-allowed opacity-50"
+                                    : active
+                                      ? "bg-[#2b6bff]/[0.08]"
+                                      : "hover:bg-neutral-100"
                                 }`}
                               >
                                 <span
@@ -1508,7 +1517,7 @@ function AppHome() {
                                     {m.label}
                                   </span>
                                   <span className="mt-0.5 block text-[12.5px] leading-snug text-neutral-600 break-words">
-                                    {m.hint}
+                                    {needsKey ? "Needs your own key — add it on the API keys page" : m.hint}
                                   </span>
                                 </span>
                                 {active ? (
@@ -1521,6 +1530,13 @@ function AppHome() {
                               </button>
                             );
                           })}
+                          <Link
+                            to="/api-keys"
+                            className="block px-4 py-3 text-[12.5px] font-medium text-[#2b6bff] hover:bg-neutral-100"
+                            onClick={() => setModelPickerOpen(false)}
+                          >
+                            Manage your API keys →
+                          </Link>
                         </div>
 
                       </>
