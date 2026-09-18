@@ -1901,14 +1901,32 @@ function AppHome() {
           </div>
         </div>
         {editTargets.length > 0 && (
-          <Inspector
-            targets={editTargets}
-            onClose={clearEditTargets}
-            onRemove={removeEditTarget}
-            onApply={applyInspectorSnippet}
-            onAiEdit={focusPrompt}
-            onFocus={focusPart}
-          />
+          <>
+            {isNarrow && (
+              <button
+                type="button"
+                aria-label="Close inspector"
+                onClick={clearEditTargets}
+                className="absolute inset-0 z-30 cursor-default bg-black/30"
+              />
+            )}
+            <div
+              className={
+                isNarrow
+                  ? "absolute inset-y-0 right-0 z-40 flex shadow-2xl"
+                  : "relative flex min-w-0 shrink-0"
+              }
+            >
+              <Inspector
+                targets={editTargets}
+                onClose={clearEditTargets}
+                onRemove={removeEditTarget}
+                onApply={applyInspectorSnippet}
+                onAiEdit={focusPrompt}
+                onFocus={focusPart}
+              />
+            </div>
+          </>
         )}
       </div>
 
