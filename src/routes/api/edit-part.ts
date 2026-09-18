@@ -38,11 +38,10 @@ STRICT RULES:
         const userMessage = `Element to rewrite:\n\n${snippet}\n\nUser instruction:\n${prompt}\n\nReturn ONLY the replacement element HTML now.`;
 
         const { resolveUserKeysFromRequest } = await import("@/lib/userKeyLookup.server");
-        const { pickProviderForModel, streamChatWithUserKey } = await import("@/lib/providerAdapters.server");
+        const { streamChatWithUserKey } = await import("@/lib/providerAdapters.server");
+        const { providerForDesignModel } = await import("@/lib/designModels");
         const { keys: userKeys } = await resolveUserKeysFromRequest(request);
-        const providerIds = new Set(Object.keys(userKeys) as Array<keyof typeof userKeys>);
-        const picked = pickProviderForModel(model, providerIds as Set<never>)
-          ?? ((Object.keys(userKeys)[0] as keyof typeof userKeys | undefined) ?? null);
+        const picked = providerForDesignModel(model);
 
         let upstream: Response;
         let usedProvider: string;
