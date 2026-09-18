@@ -1437,7 +1437,7 @@ function AppHome() {
                         <div
                           role="listbox"
                           aria-label="Choose model"
-                          className="absolute bottom-full right-0 z-50 mb-2 max-h-[60vh] w-[min(22rem,calc(100vw-2rem))] max-w-[80vw] overflow-y-auto rounded-xl border border-black/10 bg-white shadow-2xl divide-y divide-black/5"
+                          className="absolute bottom-full left-0 right-0 z-50 mb-2 max-h-[min(60vh,22rem)] w-auto max-w-none overflow-y-auto overscroll-contain rounded-xl border border-black/10 bg-white shadow-2xl divide-y divide-black/5"
                         >
                           <div className="sticky top-0 flex items-center justify-between border-b border-black/5 bg-white/95 px-4 py-3 backdrop-blur">
                             <span className="text-[13px] font-semibold text-neutral-900">Choose model</span>
