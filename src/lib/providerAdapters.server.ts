@@ -127,7 +127,33 @@ function mapModelForProvider(provider: ProviderId, modelId: string): string {
   return name || modelId;
 }
 
-/** Kick off an upstream streaming chat completion using the user's key. */
+/** Pull the human-readable error out of a provider's error body. */
+export function providerErrorMessage(provider: ProviderId, status: number, body: string): string {
+  let detail = "";
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: string } | string };
+    if (typeof parsed.error === "string") detail = parsed.error;
+    else if (parsed.error?.message) detail = parsed.error.message;
+  } catch {
+    detail = body.slice(0, 300);
+  }
+  if (status === 429)
+    return `Your ${provider} key hit its rate limit or free-tier quota. ${detail || "Wait a minute and try again, or use a key with a paid quota."}`;
+  if (status === 401 || status === 403)
+    return `Your ${provider} key was rejected (${status}). Re-add it on the API keys page. ${detail}`.trim();
+  if (status === 404)
+    return `That model isn't available on your ${provider} key. ${detail}`.trim();
+  return detail || `${provider} request failed (${status})`;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Kick off an upstream streaming chat completion using the user's key.
+ * Free-tier keys (Gemini especially) rate-limit aggressively, so retry 429/5xx
+ * with backoff and fall back to a lighter model when the requested one is
+ * unavailable or throttled.
+ */
 export async function streamChatWithUserKey(params: {
   provider: ProviderId;
   apiKey: string;
@@ -136,28 +162,50 @@ export async function streamChatWithUserKey(params: {
   userPrompt: string;
 }): Promise<Response> {
   const cfg = CONFIGS[params.provider];
-  const model = params.provider === "openrouter"
+  const primary = params.provider === "openrouter"
     ? params.model
     : mapModelForProvider(params.provider, params.model);
-  const body: Record<string, unknown> = {
-    model,
-    stream: true,
-    // Design HTML can run 700+ lines — give the model room so output isn't truncated mid-document.
-    max_tokens: 16384,
-    messages: [
-      { role: "system", content: params.systemPrompt },
-      { role: "user", content: params.userPrompt },
-    ],
-  };
-  // OpenAI's newer reasoning models reject sampling knobs but need generous completion budget.
-  if (params.provider === "openai" && /^(o\d|gpt-5|gpt-6)/i.test(model)) {
-    delete body.max_tokens;
-    body.max_completion_tokens = 16384;
-  }
+  const candidates = [primary];
+  if (params.provider === "gemini" && primary !== "gemini-flash-latest") candidates.push("gemini-flash-latest");
 
-  return fetch(cfg.chatUrl, {
-    method: "POST",
-    headers: cfg.headers(params.apiKey),
-    body: JSON.stringify(body),
-  });
+  const attempt = async (model: string) => {
+    const body: Record<string, unknown> = {
+      model,
+      stream: true,
+      // Design HTML can run 700+ lines — give the model room so output isn't truncated mid-document.
+      max_tokens: 16384,
+      messages: [
+        { role: "system", content: params.systemPrompt },
+        { role: "user", content: params.userPrompt },
+      ],
+    };
+    // OpenAI's newer reasoning models reject sampling knobs but need generous completion budget.
+    if (params.provider === "openai" && /^(o\d|gpt-5|gpt-6)/i.test(model)) {
+      delete body.max_tokens;
+      body.max_completion_tokens = 16384;
+    }
+    return fetch(cfg.chatUrl, {
+      method: "POST",
+      headers: cfg.headers(params.apiKey),
+      body: JSON.stringify(body),
+    });
+  };
+
+  let last: Response | null = null;
+  for (const model of candidates) {
+    for (let tries = 0; tries < 3; tries += 1) {
+      const res = await attempt(model);
+      if (res.ok) return res;
+      last = res;
+      const retryable = res.status === 429 || res.status >= 500;
+      if (!retryable) break;
+      if (tries < 2) {
+        await res.body?.cancel().catch(() => {});
+        await sleep(4000 * (tries + 1));
+      }
+    }
+    if (last && last.status !== 429 && last.status !== 404 && last.status < 500) break;
+  }
+  return last as Response;
 }
+
