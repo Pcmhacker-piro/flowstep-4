@@ -338,7 +338,6 @@ async function streamOneScreen(params: {
         ],
       }),
     });
-  }
 
   if (!upstream.ok || !upstream.body) {
     const body = await upstream.text().catch(() => "");
