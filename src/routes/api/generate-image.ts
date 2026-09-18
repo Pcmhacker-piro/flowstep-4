@@ -264,6 +264,9 @@ function inferProductIdentity(prompt: string): Identity {
 }
 
 function gatewayMessage(status: number, body: string) {
+  if (status === 402)
+    return "You've run out of AI credits for now, so this screen couldn't be generated. Add credits (or add your own AI provider key on the API keys page) and try again.";
+  if (status === 429) return "Too many requests right now. Wait a moment and try again.";
   try {
     const json = JSON.parse(body) as { message?: string; error?: { message?: string } };
     return json.message ?? json.error?.message ?? body;
