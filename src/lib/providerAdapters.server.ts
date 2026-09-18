@@ -160,6 +160,8 @@ export async function streamChatWithUserKey(params: {
   model: string;
   systemPrompt: string;
   userPrompt: string;
+  /** Partial output already produced — used to resume a truncated generation. */
+  continueFrom?: string;
 }): Promise<Response> {
   const cfg = CONFIGS[params.provider];
   const primary = params.provider === "openrouter"
@@ -169,16 +171,26 @@ export async function streamChatWithUserKey(params: {
   if (params.provider === "gemini" && primary !== "gemini-flash-latest") candidates.push("gemini-flash-latest");
 
   const attempt = async (model: string) => {
+    const messages: Array<{ role: string; content: string }> = [
+      { role: "system", content: params.systemPrompt },
+      { role: "user", content: params.userPrompt },
+    ];
+    if (params.continueFrom) {
+      messages.push({ role: "assistant", content: params.continueFrom });
+      messages.push({
+        role: "user",
+        content:
+          "Your previous message was cut off. Continue the output from exactly where it stopped, mid-token if needed. Do not repeat anything already sent, do not restart, do not add commentary or code fences.",
+      });
+    }
     const body: Record<string, unknown> = {
       model,
       stream: true,
       // Design HTML can run 700+ lines — give the model room so output isn't truncated mid-document.
       max_tokens: 16384,
-      messages: [
-        { role: "system", content: params.systemPrompt },
-        { role: "user", content: params.userPrompt },
-      ],
+      messages,
     };
+
     // OpenAI's newer reasoning models reject sampling knobs but need generous completion budget.
     if (params.provider === "openai" && /^(o\d|gpt-5|gpt-6)/i.test(model)) {
       delete body.max_tokens;
