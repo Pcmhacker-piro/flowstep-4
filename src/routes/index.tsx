@@ -61,9 +61,7 @@ function Logo() {
         alt="Flowstep logo"
         className="h-8 w-8 rounded-lg object-cover"
       />
-      <span className="font-display text-lg font-bold tracking-tight text-ink-foreground">
-        flowstep<span className="text-electric">.</span>
-      </span>
+      <span className="text-lg font-semibold tracking-tight text-[#0b1220]">flowstep</span>
     </Link>
   );
 }
@@ -119,41 +117,34 @@ function Nav() {
   const { signedIn, userLabel } = useSignedIn();
   const go = () => navigate({ to: signedIn ? "/account" : "/auth" });
   return (
-    <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-ink/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-black/5 bg-[#f6f2ff]/70 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Logo />
-        <nav className="hidden items-center gap-8 font-body text-sm text-ink-foreground/60 md:flex">
-          <button
-            onClick={() => scrollToId("features")}
-            className="flex items-center gap-1 transition-colors hover:text-ink-foreground"
-          >
+        <nav className="hidden items-center gap-8 text-sm text-[#0b1220]/80 md:flex">
+          <button onClick={() => scrollToId("features")} className="flex items-center gap-1 hover:text-[#0b1220]">
             Explore <ChevronDown className="h-4 w-4" />
           </button>
-          <button onClick={() => scrollToId("pricing")} className="transition-colors hover:text-ink-foreground">
-            Pricing
-          </button>
-          <button onClick={() => scrollToId("faq")} className="transition-colors hover:text-ink-foreground">
-            Docs
-          </button>
+          <button onClick={() => scrollToId("pricing")} className="hover:text-[#0b1220]">Pricing</button>
+          <button onClick={() => scrollToId("faq")} className="hover:text-[#0b1220]">Docs</button>
         </nav>
 
         <div className="flex items-center gap-3">
           {!signedIn && (
             <button
               onClick={() => navigate({ to: "/auth" })}
-              className="hidden font-body text-sm text-ink-foreground/60 transition-colors hover:text-ink-foreground md:inline"
+              className="hidden text-sm text-[#0b1220]/80 hover:text-[#0b1220] md:inline"
             >
               Sign In
             </button>
           )}
           <button
             onClick={go}
-            className="flex items-center gap-2 rounded-full bg-ink-foreground px-5 py-2 font-body text-sm font-semibold text-ink transition-transform hover:scale-[1.03] active:scale-[0.98]"
+            className="flex items-center gap-2 rounded-full bg-[#0b1220] px-4 py-2 text-sm font-medium text-white hover:bg-black"
             title={signedIn ? "Open app" : "Get started"}
           >
             {signedIn && userLabel ? (
               <>
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ink/10 text-[10px] font-semibold uppercase">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/15 text-[10px] font-semibold uppercase">
                   {userLabel.charAt(0)}
                 </span>
                 <span className="max-w-[140px] truncate">{userLabel}</span>
@@ -162,6 +153,7 @@ function Nav() {
               "Get Started"
             )}
           </button>
+
         </div>
       </div>
     </header>
@@ -170,110 +162,46 @@ function Nav() {
 
 function Hero() {
   const navigate = useNavigate();
+  const signedIn = useSignedIn();
   const go = () => navigate({ to: "/app" });
   return (
-    <section className="relative isolate overflow-hidden bg-ink font-body text-ink-foreground">
-      {/* hairline grid texture */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.055]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
-          backgroundSize: "72px 72px",
-          maskImage: "radial-gradient(ellipse at 50% 0%, #000 30%, transparent 75%)",
-        }}
-      />
-      {/* drifting accent glow behind the preview */}
-      <div className="pointer-events-none absolute -top-24 right-[-10%] h-[620px] w-[620px] animate-glow-drift rounded-full bg-electric/25 blur-[140px]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-black/40" />
-
-      <div className="relative mx-auto grid max-w-7xl grid-cols-1 gap-12 px-6 pt-20 pb-28 lg:grid-cols-2 lg:gap-16 lg:pt-28">
+    <section className="relative overflow-hidden bg-gradient-to-b from-[#f0e8ff] via-[#f4ecff] to-[#f8f2ff]">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-6 pt-16 pb-24 lg:grid-cols-2 lg:pt-24">
         <div className="flex flex-col justify-center">
-          <div className="animate-rise-in inline-flex w-fit items-center gap-2 rounded-full border border-electric/25 bg-electric/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-electric">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-electric opacity-70" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-electric" />
-            </span>
-            Prompt to interface
-          </div>
-
-          <h1
-            className="animate-rise-in mt-7 font-display text-5xl font-extrabold leading-[0.98] tracking-tight sm:text-6xl lg:text-7xl"
-            style={{ animationDelay: "80ms" }}
-          >
-            Generate
-            <br />
-            real UI in
-            <br />
-            <span className="text-electric">seconds</span>
+          <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight text-[#0b1220] sm:text-6xl lg:text-7xl">
+            Generate<br />real UI in<br />seconds
           </h1>
-
-          <p
-            className="animate-rise-in mt-7 max-w-md text-lg leading-relaxed text-ink-foreground/60"
-            style={{ animationDelay: "160ms" }}
-          >
+          <p className="mt-6 max-w-md text-lg text-[#0b1220]/70">
             Communicate visually. Get user feedback. Ship faster with fully editable designs.
           </p>
-
-          <div className="animate-rise-in mt-9 flex items-center gap-5" style={{ animationDelay: "240ms" }}>
+          <div className="mt-8 flex items-center gap-4">
             <button
               onClick={go}
-              className="group inline-flex items-center gap-2 rounded-full bg-electric px-7 py-3.5 text-base font-semibold text-white shadow-[0_0_40px_-8px_rgba(59,107,255,0.65)] transition-transform hover:scale-[1.03] active:scale-[0.98]"
+              className="group inline-flex items-center gap-2 rounded-full bg-[#2b6bff] px-6 py-3 text-base font-medium text-white shadow-lg shadow-[#2b6bff]/30 hover:bg-[#1f57df]"
             >
               Try for free
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
-            <span className="text-xs font-medium uppercase tracking-[0.2em] text-ink-foreground/35">
-              No credit card required
-            </span>
           </div>
+          <p className="mt-3 text-sm text-[#0b1220]/50">No credit card required</p>
+        </div>
 
-          <div
-            className="animate-rise-in mt-12 flex flex-wrap items-center gap-x-10 gap-y-4 border-t border-white/[0.07] pt-8"
-            style={{ animationDelay: "320ms" }}
-          >
-            {[
-              { k: "From a single prompt", v: "Real screens" },
-              { k: "Every layer editable", v: "Full control" },
-              { k: "Code or image", v: "Export ready" },
-            ].map((s) => (
-              <div key={s.k} className="flex flex-col">
-                <div className="font-display text-xl font-bold tracking-tight">{s.v}</div>
-                <div className="mt-1 text-[10px] uppercase tracking-[0.28em] text-ink-foreground/35">{s.k}</div>
+
+        <div className="relative h-[560px] overflow-hidden lg:h-[640px] [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)]">
+          <div className="flex animate-marquee-y flex-col gap-6">
+            {[...Array(2)].map((_, loop) => (
+              <div key={loop} className="flex flex-col gap-6">
+                <img src={musicPlayer} alt="Music player" className="w-full rounded-2xl shadow-xl ring-1 ring-black/5" />
+                <img src={designPower} alt="Design landing" className="w-full rounded-2xl shadow-2xl ring-1 ring-black/5" />
+                <img src={library} alt="Music library" className="w-full rounded-2xl shadow-xl ring-1 ring-black/5" />
+                <img src={mindfulness} alt="Mindfulness" className="w-full rounded-2xl shadow-xl ring-1 ring-black/5" />
+                <img src={ecommerce} alt="E-commerce" className="w-full rounded-2xl shadow-2xl ring-1 ring-black/5" />
+                <img src={systemAccess} alt="System access" className="w-full rounded-2xl shadow-xl ring-1 ring-black/5" />
               </div>
             ))}
           </div>
         </div>
 
-        <div className="relative">
-          <div className="absolute -inset-6 rounded-[36px] bg-electric/10 blur-3xl" />
-          <div className="relative rounded-[28px] border border-white/10 bg-ink-surface/80 p-3 shadow-[0_60px_120px_-40px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl">
-            <div className="mb-3 flex items-center justify-between px-2 pt-1">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-white/15" />
-                <span className="h-2 w-2 rounded-full bg-white/15" />
-                <span className="h-2 w-2 rounded-full bg-white/15" />
-              </div>
-              <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-foreground/35">
-                live canvas
-              </span>
-            </div>
-            <div className="relative h-[520px] overflow-hidden rounded-[20px] lg:h-[600px] [mask-image:linear-gradient(to_bottom,transparent,black_10%,black_90%,transparent)]">
-              <div className="flex animate-marquee-y flex-col gap-6">
-                {[...Array(2)].map((_, loop) => (
-                  <div key={loop} className="flex flex-col gap-6">
-                    <img src={musicPlayer} alt="Music player" className="w-full rounded-2xl ring-1 ring-white/10" />
-                    <img src={designPower} alt="Design landing" className="w-full rounded-2xl ring-1 ring-white/10" />
-                    <img src={library} alt="Music library" className="w-full rounded-2xl ring-1 ring-white/10" />
-                    <img src={mindfulness} alt="Mindfulness" className="w-full rounded-2xl ring-1 ring-white/10" />
-                    <img src={ecommerce} alt="E-commerce" className="w-full rounded-2xl ring-1 ring-white/10" />
-                    <img src={systemAccess} alt="System access" className="w-full rounded-2xl ring-1 ring-white/10" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );
