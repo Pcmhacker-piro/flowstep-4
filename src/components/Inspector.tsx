@@ -147,7 +147,7 @@ export function Inspector({ targets, onClose, onRemove, onApply, onAiEdit, onFoc
 
 
   return (
-    <aside className="flex h-full w-[300px] shrink-0 flex-col border-l border-black/5 bg-white">
+    <aside className="flex h-full w-[min(300px,88vw)] shrink-0 flex-col border-l border-black/5 bg-white">
       <div className="flex items-center gap-2 border-b border-black/5 px-4 py-3">
         <span className="text-sm font-semibold text-[#0b1220]">Inspector</span>
         <span className="rounded-full bg-[#2b6bff]/10 px-2 py-0.5 text-[11px] font-semibold text-[#2b6bff]">
