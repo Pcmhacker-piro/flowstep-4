@@ -1715,7 +1715,7 @@ function AppHome() {
                             it.map((i) => (i.id === item.id && i.type === "text" ? { ...i, text: e.target.value } : i)),
                           )
                         }
-                        onBlur={finishEditing}
+                        onBlur={(e) => onEditorBlur(e.currentTarget)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === "Escape") {
                             e.preventDefault();
