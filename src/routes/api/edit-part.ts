@@ -41,11 +41,12 @@ STRICT RULES:
         const { pickProviderForModel, streamChatWithUserKey } = await import("@/lib/providerAdapters.server");
         const { keys: userKeys } = await resolveUserKeysFromRequest(request);
         const providerIds = new Set(Object.keys(userKeys) as Array<keyof typeof userKeys>);
-        const picked = pickProviderForModel(model, providerIds as Set<never>);
+        const picked = pickProviderForModel(model, providerIds as Set<never>)
+          ?? ((Object.keys(userKeys)[0] as keyof typeof userKeys | undefined) ?? null);
 
         let upstream: Response;
         let usedProvider: string;
-        if (picked && userKeys[picked] && model !== "openai/gpt-6-astra") {
+        if (picked && userKeys[picked]) {
           usedProvider = `byo:${picked}`;
           upstream = await streamChatWithUserKey({
             provider: picked,

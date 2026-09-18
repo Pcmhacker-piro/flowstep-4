@@ -285,48 +285,109 @@ async function streamOneScreen(params: {
   emit: (event: StreamEvent) => void;
   direction: ArtDirection;
   runId: string;
+  /** When the signed-in user saved their own provider key, generate with it instead of Lovable credits. */
+  byo?: { provider: string; apiKey: string; model: string } | null;
 }) {
-  const { key, prompt, screens, screen, images, signal, emit, direction, runId } = params;
+  const { key, prompt, screens, screen, images, signal, emit, direction, runId, byo } = params;
   emit({ type: "screen-start", screenId: screen.id });
 
-  const upstream = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": key,
-      "X-Lovable-AIG-SDK": "fetch",
-    },
-    signal,
-    body: JSON.stringify({
-      model: "openai/gpt-6-astra",
-      stream: true,
-      reasoning: { effort: "low", summary: "concise" },
-      input: [
-        { role: "developer", content: [{ type: "input_text", text: systemPrompt(screen.kind) }] },
-        {
-          role: "user",
-          content: [
-            { type: "input_text", text: buildScreenPrompt(prompt, screens, screen, direction, runId, images.length > 0) },
-            ...(images.length > 0
-              ? [
-                  {
-                    type: "input_text" as const,
-                    text:
-                      "REFERENCE IMAGES (attached below): treat these as the visual brief. Match their layout structure, colour palette, typography weight/scale, spacing rhythm, component shapes and overall mood as closely as the screen brief allows. If a reference shows a specific screen, reproduce its composition faithfully rather than inventing a new one. Never describe the reference in the output; only build it.",
-                  },
-                  ...images.map((image) => ({ type: "input_image" as const, image_url: image, detail: "high" as const })),
-                ]
-              : []),
-          ],
-        },
-      ],
-    }),
-  });
+  const system = systemPrompt(screen.kind);
+  const userText = buildScreenPrompt(prompt, screens, screen, direction, runId, images.length > 0);
+
+  let upstream: Response;
+  if (byo) {
+    const { streamChatWithUserKey } = await import("@/lib/providerAdapters.server");
+    upstream = await streamChatWithUserKey({
+      provider: byo.provider as never,
+      apiKey: byo.apiKey,
+      model: byo.model,
+      systemPrompt: system,
+      userPrompt: userText,
+    });
+  } else {
+    upstream = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": key,
+        "X-Lovable-AIG-SDK": "fetch",
+      },
+      signal,
+      body: JSON.stringify({
+        model: "openai/gpt-6-astra",
+        stream: true,
+        reasoning: { effort: "low", summary: "concise" },
+        input: [
+          { role: "developer", content: [{ type: "input_text", text: system }] },
+          {
+            role: "user",
+            content: [
+              { type: "input_text", text: userText },
+              ...(images.length > 0
+                ? [
+                    {
+                      type: "input_text" as const,
+                      text:
+                        "REFERENCE IMAGES (attached below): treat these as the visual brief. Match their layout structure, colour palette, typography weight/scale, spacing rhythm, component shapes and overall mood as closely as the screen brief allows. If a reference shows a specific screen, reproduce its composition faithfully rather than inventing a new one. Never describe the reference in the output; only build it.",
+                    },
+                    ...images.map((image) => ({ type: "input_image" as const, image_url: image, detail: "high" as const })),
+                  ]
+                : []),
+            ],
+          },
+        ],
+      }),
+    });
+  }
 
   if (!upstream.ok || !upstream.body) {
     const body = await upstream.text().catch(() => "");
     throw new Error(gatewayMessage(upstream.status, body));
   }
+
+  if (byo) {
+    // Provider keys stream OpenAI-style chat completions: { choices: [{ delta: { content } }] }
+    let byoError = "";
+    let sawText = false;
+    const chatParser = createParser({
+      onEvent(event) {
+        if (!event.data || event.data === "[DONE]") return;
+        let payload: {
+          choices?: Array<{ delta?: { content?: string } }>;
+          error?: { message?: string };
+        };
+        try {
+          payload = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        if (payload.error?.message) {
+          byoError = payload.error.message;
+          return;
+        }
+        const delta = payload.choices?.[0]?.delta?.content;
+        if (typeof delta === "string" && delta.length > 0) {
+          sawText = true;
+          emit({ type: "screen-delta", screenId: screen.id, delta });
+        }
+      },
+    });
+    const chatReader = upstream.body.pipeThrough(new TextDecoderStream()).getReader();
+    try {
+      while (true) {
+        const { value, done } = await chatReader.read();
+        if (done) break;
+        chatParser.feed(value);
+      }
+    } finally {
+      chatReader.cancel().catch(() => {});
+    }
+    if (byoError) throw new Error(byoError);
+    if (!sawText) throw new Error("Your own provider key returned no design output for this screen.");
+    emit({ type: "screen-complete", screenId: screen.id });
+    return;
+  }
+
 
   let completed = false;
   let streamError = "";
@@ -379,6 +440,7 @@ export const Route = createFileRoute("/api/generate-image")({
           images?: unknown;
           runId?: unknown;
           variationIndex?: unknown;
+          model?: unknown;
         };
         const prompt = (body.prompt ?? "").trim();
         const images = (Array.isArray(body.images) ? body.images : [])
@@ -394,6 +456,26 @@ export const Route = createFileRoute("/api/generate-image")({
 
         const key = process.env['LOVABLE_API_KEY'];
         if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+
+        // If the signed-in user saved their own provider key (API keys page),
+        // generate with it so their own quota is used instead of Lovable credits.
+        const requestedModel = typeof body.model === "string" ? body.model : "openai/gpt-6-astra";
+        let byo: { provider: string; apiKey: string; model: string } | null = null;
+        try {
+          const { resolveUserKeysFromRequest } = await import("@/lib/userKeyLookup.server");
+          const { pickProviderForModel } = await import("@/lib/providerAdapters.server");
+          const { keys: userKeys } = await resolveUserKeysFromRequest(request);
+          const saved = Object.keys(userKeys) as Array<keyof typeof userKeys>;
+          const providerIds = new Set(saved) as Set<never>;
+          const picked = pickProviderForModel(requestedModel, providerIds) ?? saved[0] ?? null;
+          const apiKey = picked ? userKeys[picked] : undefined;
+          if (picked && apiKey) {
+            byo = { provider: picked, apiKey, model: requestedModel };
+          }
+        } catch {
+          // Fall back to Lovable credits when key lookup fails.
+        }
+
 
         const screens = planProductScreens(prompt);
         const stream = new ReadableStream<Uint8Array>({
@@ -412,7 +494,7 @@ export const Route = createFileRoute("/api/generate-image")({
                 const screen = queue.shift();
                 if (!screen) return;
                 try {
-                  await streamOneScreen({ key, prompt, screens, screen, images, signal: request.signal, emit, direction, runId });
+                  await streamOneScreen({ key, prompt, screens, screen, images, signal: request.signal, emit, direction, runId, byo });
                   completed += 1;
                 } catch (error) {
                   if (request.signal.aborted) return;
