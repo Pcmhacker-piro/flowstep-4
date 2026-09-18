@@ -456,6 +456,26 @@ export const Route = createFileRoute("/api/generate-image")({
         const key = process.env['LOVABLE_API_KEY'];
         if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
 
+        // If the signed-in user saved their own provider key (API keys page),
+        // generate with it so their own quota is used instead of Lovable credits.
+        const requestedModel = typeof body.model === "string" ? body.model : "openai/gpt-6-astra";
+        let byo: { provider: string; apiKey: string; model: string } | null = null;
+        try {
+          const { resolveUserKeysFromRequest } = await import("@/lib/userKeyLookup.server");
+          const { pickProviderForModel } = await import("@/lib/providerAdapters.server");
+          const { keys: userKeys } = await resolveUserKeysFromRequest(request);
+          const providerIds = new Set(Object.keys(userKeys)) as Set<never>;
+          const picked = pickProviderForModel(requestedModel, providerIds)
+            ?? (Object.keys(userKeys)[0] as never | undefined)
+            ?? null;
+          if (picked && userKeys[picked]) {
+            byo = { provider: picked, apiKey: userKeys[picked]!, model: requestedModel };
+          }
+        } catch {
+          // Fall back to Lovable credits when key lookup fails.
+        }
+
+
         const screens = planProductScreens(prompt);
         const stream = new ReadableStream<Uint8Array>({
           async start(controller) {
