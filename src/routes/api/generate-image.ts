@@ -465,12 +465,12 @@ export const Route = createFileRoute("/api/generate-image")({
           const { resolveUserKeysFromRequest } = await import("@/lib/userKeyLookup.server");
           const { pickProviderForModel } = await import("@/lib/providerAdapters.server");
           const { keys: userKeys } = await resolveUserKeysFromRequest(request);
-          const providerIds = new Set(Object.keys(userKeys)) as Set<never>;
-          const picked = pickProviderForModel(requestedModel, providerIds)
-            ?? (Object.keys(userKeys)[0] as never | undefined)
-            ?? null;
-          if (picked && userKeys[picked]) {
-            byo = { provider: picked, apiKey: userKeys[picked]!, model: requestedModel };
+          const saved = Object.keys(userKeys) as Array<keyof typeof userKeys>;
+          const providerIds = new Set(saved) as Set<never>;
+          const picked = pickProviderForModel(requestedModel, providerIds) ?? saved[0] ?? null;
+          const apiKey = picked ? userKeys[picked] : undefined;
+          if (picked && apiKey) {
+            byo = { provider: picked, apiKey, model: requestedModel };
           }
         } catch {
           // Fall back to Lovable credits when key lookup fails.
