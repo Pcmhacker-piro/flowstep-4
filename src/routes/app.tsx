@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import logoAsset from "@/assets/logo.png";
 import { useEffect, useRef, useState, useCallback, type PointerEvent as ReactPointerEvent } from "react";
 import { DESIGN_MODELS, DEFAULT_DESIGN_MODEL, type DesignModelId } from "@/lib/designModels";
+import { useServerFn } from "@tanstack/react-start";
+import { listMyApiKeys } from "@/lib/apiKeys.functions";
 import { flushSync } from "react-dom";
 import { createParser } from "eventsource-parser";
 import { supabase } from "@/integrations/supabase/client";
