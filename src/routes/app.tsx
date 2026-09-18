@@ -87,6 +87,10 @@ function AppHome() {
   const [level, setLevel] = useState<"v1" | "v2" | "polished" | "industry">("industry");
   const [model, setModel] = useState<DesignModelId>(DEFAULT_DESIGN_MODEL);
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
+  // Providers the signed-in user has saved a key for — models needing a missing
+  // key are shown greyed out in the picker.
+  const [savedProviders, setSavedProviders] = useState<string[]>([]);
+  const listKeysFn = useServerFn(listMyApiKeys);
   const [messages, setMessages] = useState<ChatMsg[]>([
     { id: uid(), role: "assistant", text: "Describe any UI or design and I'll generate it on your canvas." },
   ]);
