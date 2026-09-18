@@ -1897,12 +1897,6 @@ function AppHome() {
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
-            <button
-              onClick={() => navigate({ to: "/", hash: "pricing" })}
-              className="ml-1 rounded-full bg-[#2b6bff] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[#1e57e6]"
-            >
-              Upgrade
-            </button>
 
           </div>
         </div>
