@@ -494,7 +494,7 @@ export const Route = createFileRoute("/api/generate-image")({
                 const screen = queue.shift();
                 if (!screen) return;
                 try {
-                  await streamOneScreen({ key, prompt, screens, screen, images, signal: request.signal, emit, direction, runId });
+                  await streamOneScreen({ key, prompt, screens, screen, images, signal: request.signal, emit, direction, runId, byo });
                   completed += 1;
                 } catch (error) {
                   if (request.signal.aborted) return;
