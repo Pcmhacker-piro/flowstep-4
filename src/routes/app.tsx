@@ -483,6 +483,24 @@ function AppHome() {
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
   }, []);
 
+  // Load which providers the user saved a key for, so the picker can grey out
+  // models that cannot run yet.
+  useEffect(() => {
+    if (!email) {
+      setSavedProviders([]);
+      return;
+    }
+    let cancelled = false;
+    listKeysFn()
+      .then((rows) => {
+        if (!cancelled) setSavedProviders(rows.map((r) => r.provider as string));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [email, listKeysFn]);
+
   async function signOut() {
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
