@@ -294,18 +294,14 @@ async function streamOneScreen(params: {
   const system = systemPrompt(screen.kind);
   const userText = buildScreenPrompt(prompt, screens, screen, direction, runId, images.length > 0);
 
-  let upstream: Response;
   if (byo) {
-    const { streamChatWithUserKey } = await import("@/lib/providerAdapters.server");
-    upstream = await streamChatWithUserKey({
-      provider: byo.provider as never,
-      apiKey: byo.apiKey,
-      model: byo.model,
-      systemPrompt: system,
-      userPrompt: userText,
-    });
-  } else {
-    upstream = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+    await streamByoScreen({ byo, system, userText, screenId: screen.id, emit, signal });
+    return;
+  }
+
+  const upstream: Response = await (async () =>
+    fetch("https://ai.gateway.lovable.dev/v1/responses", {
+
       method: "POST",
       headers: {
         "Content-Type": "application/json",
