@@ -542,6 +542,7 @@ function AppHome() {
       const { x, y } = toCanvasCoords(e.clientX, e.clientY);
       const id = uid();
       mutateItems("Add text", (it) => [...it, { id, type: "text", x, y, w: 240, h: 40, text: "" }]);
+      textEditStartRef.current = Date.now();
       setEditingTextId(id);
       setSelectedId(id);
       setTool("select");
